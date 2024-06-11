@@ -13,6 +13,7 @@ import (
 func main() {
 	localPort := flag.Int("l", 5000, "local port to listen")
 	remoteAddress := flag.String("r", "localhost:8000", "Remote address to forward to in format 'host:port'")
+	delay := flag.Duration("d", time.Millisecond*100, "Delay")
 	flag.Parse()
 
 	localAddress := fmt.Sprintf("localhost:%d", *localPort)
@@ -41,19 +42,19 @@ func main() {
 		}
 
 		// Handle the actual forwarding to the remote
-		go handlePortForward(localAddress, *remoteAddress, localConnection)
+		go handlePortForward(localAddress, *remoteAddress, *delay, localConnection)
 	}
 }
 
-func handlePortForward(localAddress string, remoteAddress string, local net.Conn) {
-	fmt.Printf("forwarding connection %s => %s\n", localAddress, remoteAddress)
+func handlePortForward(localAddress string, remoteAddress string, delay time.Duration, local net.Conn) {
+	fmt.Printf("forwarding connection %s => %s (delayed: %s)\n", localAddress, remoteAddress, delay.String())
 
 	remoteConnectionForwarded, err := net.Dial("tcp", remoteAddress)
 	if err != nil {
 		panic(err)
 	}
 
-	delayedRemoteWriter := delayed_writer.New(remoteConnectionForwarded, time.Millisecond*1000)
+	delayedRemoteWriter := delayed_writer.New(remoteConnectionForwarded, delay)
 
 	// Ensure the local gets the response data from the remote
 	go func() { io.Copy(local, remoteConnectionForwarded) }()
